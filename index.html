@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MoneyControl – Personal Savings Account System</title>
+
+  <!-- Styles -->
+  <link rel="stylesheet" href="styles.css" />
+
+  <!-- Chart.js -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+
+  <!-- jsPDF -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+  <!--
+    OPTIONAL: Uncomment to use WASM backend (after compiling main.cpp)
+    <script src="moneycontrol.js"></script>
+  -->
+</head>
+<body>
+
+<div class="app-wrapper">
+
+  <!-- ═══ SIDEBAR ═══ -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-mark">
+        <div class="logo-icon">💰</div>
+        <div>
+          <div class="logo-text">MoneyControl</div>
+          <div class="logo-sub">Savings System</div>
+        </div>
+      </div>
+      <span class="backend-badge js" id="backend-badge">🔷 JavaScript</span>
+    </div>
+
+    <nav class="sidebar-nav">
+      <div class="nav-label">Main</div>
+
+      <div class="nav-item active" data-section="dashboard">
+        <span class="nav-icon">⬡</span>
+        <span>Dashboard</span>
+      </div>
+
+      <div class="nav-item" data-section="accounts">
+        <span class="nav-icon">◈</span>
+        <span>Accounts</span>
+        <span class="nav-badge" id="sidebar-accounts">0</span>
+      </div>
+
+      <div class="nav-item" data-section="transactions">
+        <span class="nav-icon">⇄</span>
+        <span>Transactions</span>
+        <span class="nav-badge" id="sidebar-txns">0</span>
+      </div>
+
+      <div class="nav-label">Reports</div>
+
+      <div class="nav-item" data-section="analytics">
+        <span class="nav-icon">◎</span>
+        <span>Analytics</span>
+      </div>
+    </nav>
+
+    <div class="sidebar-footer">
+      MoneyControl v2.0 &nbsp;·&nbsp; WASM + JS Hybrid
+    </div>
+  </aside>
+
+  <!-- ═══ MAIN ═══ -->
+  <main class="main">
+
+    <!-- Topbar -->
+    <div class="topbar">
+      <div style="display:flex;align-items:center;gap:12px">
+        <button class="btn-menu" id="menu-toggle">☰</button>
+        <div class="page-title" id="page-title">Dashboard</div>
+      </div>
+      <div class="topbar-right">
+        <button class="btn btn-primary" onclick="openModal('create-modal')">
+          + New Account
+        </button>
+      </div>
+    </div>
+
+    <div class="content">
+
+      <!-- ══════════════════════════════
+           SECTION: DASHBOARD
+      ══════════════════════════════ -->
+      <section class="section active" id="section-dashboard">
+
+        <!-- Stat Cards -->
+        <div class="stat-grid">
+          <div class="stat-card green">
+            <span class="stat-icon">🏦</span>
+            <div class="stat-value" id="stat-accounts">0</div>
+            <div class="stat-label">Total Accounts</div>
+          </div>
+          <div class="stat-card purple">
+            <span class="stat-icon">💎</span>
+            <div class="stat-value" id="stat-balance">₹0.00</div>
+            <div class="stat-label">Total Balance</div>
+          </div>
+          <div class="stat-card orange">
+            <span class="stat-icon">⇄</span>
+            <div class="stat-value" id="stat-transactions">0</div>
+            <div class="stat-label">Total Transactions</div>
+          </div>
+          <div class="stat-card red">
+            <span class="stat-icon">◈</span>
+            <div class="stat-value" id="stat-avg">₹0.00</div>
+            <div class="stat-label">Average Balance</div>
+          </div>
+        </div>
+
+        <!-- Charts -->
+        <div class="charts-grid">
+          <div class="chart-card">
+            <div class="chart-title">Deposit vs Withdrawal</div>
+            <div class="chart-wrap">
+              <canvas id="chart-bar"></canvas>
+            </div>
+          </div>
+          <div class="chart-card">
+            <div class="chart-title">Transaction Volume</div>
+            <div class="chart-wrap">
+              <canvas id="chart-line"></canvas>
+            </div>
+          </div>
+          <div class="chart-card">
+            <div class="chart-title">Balance Distribution</div>
+            <div class="chart-wrap">
+              <canvas id="chart-pie"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tables -->
+        <div class="tables-grid">
+          <div class="table-card">
+            <div class="table-header">
+              <div class="table-title">Recent Transactions</div>
+            </div>
+            <div class="table-scroll">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Type</th>
+                    <th>Name</th>
+                    <th>Amount</th>
+                    <th>Balance</th>
+                    <th>Date</th>
+                  </tr>
+                </thead>
+                <tbody id="recent-txns-body">
+                  <tr><td colspan="5" class="empty-row">Loading…</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="table-card">
+            <div class="table-header">
+              <div class="table-title">⚠ Low Balance Accounts <span style="color:var(--red);font-size:0.7rem">&lt; ₹500</span></div>
+            </div>
+            <div class="table-scroll">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Account No.</th>
+                    <th>Balance</th>
+                  </tr>
+                </thead>
+                <tbody id="low-balance-body">
+                  <tr><td colspan="3" class="empty-row">Loading…</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- ══════════════════════════════
+           SECTION: ACCOUNTS
+      ══════════════════════════════ -->
+      <section class="section" id="section-accounts">
+        <div class="section-header">
+          <h2>Accounts</h2>
+          <input type="text" class="search-input" id="account-search" placeholder="🔍  Search by name or account no…" />
+          <button class="btn btn-primary" onclick="openModal('create-modal')">+ New</button>
+        </div>
+        <div class="accounts-list" id="accounts-list">
+          <!-- populated by JS -->
+        </div>
+      </section>
+
+      <!-- ══════════════════════════════
+           SECTION: TRANSACTIONS
+      ══════════════════════════════ -->
+      <section class="section" id="section-transactions">
+        <div class="section-header">
+          <h2>All Transactions</h2>
+        </div>
+        <div class="full-table-card">
+          <div class="table-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>#ID</th>
+                  <th>Name</th>
+                  <th>Account</th>
+                  <th>Type</th>
+                  <th>Amount</th>
+                  <th>Date</th>
+                  <th>Receipt</th>
+                </tr>
+              </thead>
+              <tbody id="all-txns-body">
+                <tr><td colspan="7" class="empty-row">Loading…</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ══════════════════════════════
+           SECTION: ANALYTICS
+      ══════════════════════════════ -->
+      <section class="section" id="section-analytics">
+        <div class="section-header">
+          <h2>Analytics</h2>
+        </div>
+        <div class="analytics-grid">
+          <div class="chart-card">
+            <div class="chart-title">Deposit vs Withdrawal Volume</div>
+            <div class="chart-wrap" style="height:280px">
+              <canvas id="chart-bar-a"></canvas>
+            </div>
+          </div>
+          <div class="chart-card">
+            <div class="chart-title">Balance Distribution by Account</div>
+            <div class="chart-wrap" style="height:280px">
+              <canvas id="chart-pie-a"></canvas>
+            </div>
+          </div>
+          <div class="chart-card full">
+            <div class="chart-title">Transaction Activity Over Time</div>
+            <div class="chart-wrap" style="height:250px">
+              <canvas id="chart-line-a"></canvas>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </div><!-- /content -->
+  </main><!-- /main -->
+</div><!-- /app-wrapper -->
+
+<!-- ═══════════════════════════════════
+     MODALS
+═══════════════════════════════════ -->
+
+<!-- Create Account Modal -->
+<div class="modal" id="create-modal">
+  <div class="modal-backdrop"></div>
+  <div class="modal-box">
+    <div class="modal-title">Create New Account</div>
+    <form id="create-form">
+      <div class="form-group">
+        <label>Account Holder Name</label>
+        <input type="text" id="new-name" placeholder="e.g. Arjun Sharma" required autocomplete="off" />
+      </div>
+      <div class="form-group">
+        <label>Initial Deposit (₹)</label>
+        <input type="number" id="new-amount" placeholder="0.00" min="0" step="0.01" />
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-ghost" onclick="closeModal('create-modal')">Cancel</button>
+        <button type="submit" class="btn btn-primary">Create Account</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Transaction Modal -->
+<div class="modal" id="txn-modal">
+  <div class="modal-backdrop"></div>
+  <div class="modal-box">
+    <div class="modal-title" id="txn-modal-title">Transaction</div>
+    <form id="txn-form">
+      <input type="hidden" id="txn-type" />
+      <div class="form-group">
+        <label>Amount (₹)</label>
+        <input type="number" id="txn-amount" placeholder="Enter amount" min="0.01" step="0.01" required />
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-ghost" onclick="closeModal('txn-modal')">Cancel</button>
+        <button type="submit" class="btn btn-primary">Confirm</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Delete Confirm Modal -->
+<div class="modal" id="delete-modal">
+  <div class="modal-backdrop"></div>
+  <div class="modal-box">
+    <div class="modal-title">Delete Account?</div>
+    <p style="color:var(--text-secondary);font-size:0.9rem;margin-bottom:20px">
+      You are about to soft-delete <strong id="delete-name" style="color:var(--text-primary)"></strong>.
+      This action can be reversed by restoring from file backup.
+    </p>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('delete-modal')">Cancel</button>
+      <button class="btn btn-danger" onclick="handleDeleteConfirm()">Delete Account</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<!-- Scripts -->
+<script src="backend.js"></script>
+<script src="script.js"></script>
+
+<!-- Analytics section wires up separate canvas IDs -->
+<script>
+// Override renderAnalytics to use analytics-page canvases
+const _origRenderAnalytics = renderAnalytics;
+window.renderAnalytics = function() {
+  const stats = Bridge.getDashboardStats();
+  const txns = Bridge.getTransactions();
+  const accs = Bridge.getAccounts();
+
+  // Bar
+  const barCtx = document.getElementById('chart-bar-a')?.getContext('2d');
+  if (barCtx) {
+    if (window._chartBarA) window._chartBarA.destroy();
+    window._chartBarA = new Chart(barCtx, {
+      type: 'bar',
+      data: {
+        labels: ['Deposits', 'Withdrawals'],
+        datasets: [{
+          data: [stats.totalDeposits, stats.totalWithdrawals],
+          backgroundColor: ['rgba(99,255,180,0.75)', 'rgba(255,99,132,0.75)'],
+          borderColor: ['#63ffb4','#ff6384'],
+          borderWidth: 2, borderRadius: 8
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { ticks: { color:'#718096' }, grid: { color:'rgba(255,255,255,0.05)' } },
+          y: { ticks: { color:'#718096', callback: v => '₹'+v.toLocaleString('en-IN') }, grid: { color:'rgba(255,255,255,0.05)' } }
+        }
+      }
+    });
+  }
+
+  // Pie
+  const pieCtx = document.getElementById('chart-pie-a')?.getContext('2d');
+  if (pieCtx && accs.length) {
+    if (window._chartPieA) window._chartPieA.destroy();
+    const sorted = [...accs].sort((a,b)=>b.balance-a.balance).slice(0,8);
+    window._chartPieA = new Chart(pieCtx, {
+      type: 'doughnut',
+      data: {
+        labels: sorted.map(a=>a.name),
+        datasets: [{
+          data: sorted.map(a=>a.balance),
+          backgroundColor: ['#63ffb4','#7c6fff','#ff6384','#ffa94d','#38bdf8','#fb7185','#34d399','#a78bfa'],
+          borderWidth: 2, borderColor: '#0f172a'
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false, cutout: '60%',
+        plugins: { legend: { labels: { color:'#a0aec0', font: { family:'Sora' }, boxWidth:12 } } }
+      }
+    });
+  }
+
+  // Line
+  const lineCtx = document.getElementById('chart-line-a')?.getContext('2d');
+  if (lineCtx) {
+    if (window._chartLineA) window._chartLineA.destroy();
+    const grouped = {};
+    txns.forEach(t => {
+      const d = new Date(t.timestamp).toLocaleDateString('en-IN',{month:'short',day:'numeric'});
+      grouped[d] = (grouped[d]||0) + 1;
+    });
+    const labels = Object.keys(grouped);
+    const data = labels.map(l=>grouped[l]);
+    window._chartLineA = new Chart(lineCtx, {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [{
+          label: 'Transactions',
+          data, borderColor:'#7c6fff',
+          backgroundColor:'rgba(124,111,255,0.15)',
+          tension:0.4, fill:true, pointBackgroundColor:'#7c6fff', pointRadius:4
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { labels: { color:'#a0aec0', font:{family:'Sora'} } } },
+        scales: {
+          x: { ticks:{color:'#718096'}, grid:{color:'rgba(255,255,255,0.05)'} },
+          y: { ticks:{color:'#718096'}, grid:{color:'rgba(255,255,255,0.05)'} }
+        }
+      }
+    });
+  }
+};
+
+// Update page title on nav
+document.querySelectorAll('.nav-item').forEach(item => {
+  item.addEventListener('click', () => {
+    const titles = { dashboard:'Dashboard', accounts:'Accounts', transactions:'Transactions', analytics:'Analytics' };
+    document.getElementById('page-title').textContent = titles[item.dataset.section] || 'MoneyControl';
+  });
+});
+</script>
+
+</body>
+</html>
