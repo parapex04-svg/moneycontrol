@@ -137,12 +137,13 @@ function detectWASM() {
 function updateBackendBadge() {
   const badge = document.getElementById('backend-badge');
   if (!badge) return;
+
   if (useWASM) {
-    badge.textContent = '⚡ WebAssembly';
+    badge.textContent = '💠 C++ / ⚡ WASM';
     badge.className = 'backend-badge wasm';
   } else {
-    badge.textContent = '🔷 JavaScript';
-    badge.className = 'backend-badge js';
+    badge.textContent = '💠 C++ (JS Fallback)';
+    badge.className = 'backend-badge wasm';
   }
 }
 
